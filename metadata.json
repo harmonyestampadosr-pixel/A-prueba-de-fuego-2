@@ -1,0 +1,6 @@
+{
+  "name": "A PRUEBA DE FUEGO",
+  "description": "Red social juvenil cristiana moderna y comunidad adventista para compartir la fe, retos espirituales, eventos, testimonios y servicio.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

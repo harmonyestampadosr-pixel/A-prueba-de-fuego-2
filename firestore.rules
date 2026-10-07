@@ -1,0 +1,192 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'harmonyestampadosr@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 1. Users
+    match /users/{userId} {
+      allow read: if true;
+      allow create: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(userId);
+      allow update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(userId);
+      allow delete: if isAdmin();
+
+      // Subcolección de insignias y recompensas del usuario
+      match /badges/{badgeId} {
+        allow read: if true;
+        allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(badgeId);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // 2. Posts
+    match /posts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(postId);
+      allow update: if isSignedIn() && isValidId(postId);
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+
+      // Subcolección 'comments' dentro de cada publicación
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isValidId(commentId);
+        allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+      }
+    }
+
+    // 3. Challenges & Submissions
+    match /challenges/{challengeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /submissions/{submissionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid && isValidId(submissionId);
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // 4. Comments
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(commentId);
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+    }
+
+    // 5. Reactions
+    match /reactions/{reactionId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(reactionId);
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    // 6. Stories
+    match /stories/{storyId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(storyId);
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+    }
+
+    // 7. Messages
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(messageId);
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.senderId || isAdmin());
+    }
+
+    // 8. Groups
+    match /groups/{groupId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(groupId);
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.leaderId || isAdmin());
+    }
+
+    // 9. Events
+    match /events/{eventId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 10. Badges
+    match /badges/{badgeId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 11. Achievements
+    match /achievements/{achievementId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(achievementId);
+      allow update, delete: if isAdmin();
+    }
+
+    // 12. Notifications
+    match /notifications/{notificationId} {
+      allow read: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
+      allow create: if isSignedIn() && isValidId(notificationId);
+      allow update, delete: if isSignedIn() && (request.auth.uid == resource.data.userId || isAdmin());
+    }
+
+    // 13. Reports
+    match /reports/{reportId} {
+      allow read: if isAdmin();
+      allow create: if isSignedIn() && isValidId(reportId);
+      allow update, delete: if isAdmin();
+    }
+
+    // 14. Official Sources
+    match /official_sources/{sourceId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 15. News
+    match /news/{newsId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 16. Channels
+    match /channels/{channelId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 17. Games
+    match /games/{gameId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // 18. Game Scores
+    match /game_scores/{scoreId} {
+      allow read: if true;
+      allow create: if isSignedIn() && isValidId(scoreId);
+      allow delete: if isAdmin();
+    }
+
+    // 19. Prayer Requests
+    match /prayers/{prayerId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid && isValidId(prayerId);
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+    }
+
+    // 20. Testimonials
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow create: if isSignedIn() && request.resource.data.authorId == request.auth.uid && isValidId(testimonialId);
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn() && (request.auth.uid == resource.data.authorId || isAdmin());
+    }
+
+    // Test connection doc
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}
